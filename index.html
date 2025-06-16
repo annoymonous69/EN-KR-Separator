@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EN/KR Separator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for better textarea focus and scrollbar */
+        textarea:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #3b82f6; /* blue-500 */
+        }
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #f1f5f9; /* slate-100 */
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* slate-400 */
+            border-radius: 4px;
+        }
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+        .copy-feedback {
+            transition: opacity 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-6xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8">
+
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">EN/KR Separator</h1>
+            <p class="text-slate-500 mt-2">Paste text with mixed English and Korean, and we'll sort it out.</p>
+        </div>
+
+        <!-- Input Section -->
+        <div>
+            <label for="input-text" class="block text-sm font-medium text-slate-700 mb-2">Mixed Text</label>
+            <textarea id="input-text" rows="6" class="w-full p-4 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder=""></textarea>
+            <div class="flex justify-end mt-4">
+                <button onclick="separateLanguages()" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105">
+                    Separate
+                </button>
+            </div>
+        </div>
+
+        <!-- Divider -->
+        <hr class="my-8 border-slate-200">
+
+        <!-- Output Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Language 1 Output -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label id="label-output-1" for="output-1" class="block text-sm font-medium text-slate-700">English</label>
+                     <div class="relative">
+                        <button onclick="copyToClipboard('output-1', 'feedback-1')" class="px-3 py-1 text-sm bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300">Copy</button>
+                        <span id="feedback-1" class="copy-feedback absolute -top-7 right-0 bg-slate-800 text-white text-xs px-2 py-1 rounded-md opacity-0">Copied!</span>
+                    </div>
+                </div>
+                <textarea id="output-1" rows="6" readonly class="w-full p-4 border bg-slate-50 border-slate-200 rounded-lg resize-none"></textarea>
+            </div>
+
+            <!-- Language 2 Output -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label id="label-output-2" for="output-2" class="block text-sm font-medium text-slate-700">Korean</label>
+                    <div class="relative">
+                        <button onclick="copyToClipboard('output-2', 'feedback-2')" class="px-3 py-1 text-sm bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300">Copy</button>
+                        <span id="feedback-2" class="copy-feedback absolute -top-7 right-0 bg-slate-800 text-white text-xs px-2 py-1 rounded-md opacity-0">Copied!</span>
+                    </div>
+                </div>
+                <textarea id="output-2" rows="6" readonly class="w-full p-4 border bg-slate-50 border-slate-200 rounded-lg resize-none"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the language detection library
+        import { franc } from 'https://esm.sh/franc@6';
+        
+        // Define the list of languages to recognize (ISO 639-3 codes)
+        const allowedLanguages = ['eng', 'kor'];
+
+        /**
+         * Main function to separate languages from the input textarea.
+         * It uses the 'franc' library to detect the language of each line
+         * and groups the lines into English and Korean. Other languages are ignored.
+         */
+        window.separateLanguages = function() {
+            const inputText = document.getElementById('input-text').value;
+            const output1 = document.getElementById('output-1');
+            const output2 = document.getElementById('output-2');
+            const label1 = document.getElementById('label-output-1');
+            const label2 = document.getElementById('label-output-2');
+
+            // Clear outputs and reset labels if input is empty
+            if (!inputText.trim()) {
+                output1.value = '';
+                output2.value = '';
+                label1.textContent = 'English';
+                label2.textContent = 'Korean';
+                return;
+            }
+            
+            const lines = inputText.split('\n');
+            const languageGroups = {
+                'eng': [],
+                'kor': []
+            };
+
+            // Detect language for each line and group them
+            lines.forEach(line => {
+                if (line.trim() === '') return; // Skip empty lines
+                
+                // Use franc to detect the language, restricting it to the allowed list.
+                // A minLength of 1 is safe here due to the distinct character sets of English and Korean.
+                const langCode = franc(line, { 
+                    minLength: 1,
+                    only: allowedLanguages 
+                }); 
+                
+                // Only add the line if it's one of the allowed languages.
+                if (langCode === 'eng' || langCode === 'kor') {
+                    languageGroups[langCode].push(line);
+                }
+            });
+
+            // Set the text for each language box
+            output1.value = languageGroups['eng'].join('\n');
+            output2.value = languageGroups['kor'].join('\n');
+        }
+
+        /**
+         * Copies text from a specified textarea to the clipboard and shows feedback.
+         * @param {string} elementId - The ID of the textarea to copy from.
+         * @param {string} feedbackId - The ID of the feedback element to show.
+         */
+        window.copyToClipboard = function(elementId, feedbackId) {
+            const textarea = document.getElementById(elementId);
+            if (!textarea.value) return; // Don't copy if empty
+
+            // Create a temporary textarea to avoid issues with readonly fields and selections
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = textarea.value;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            // Show 'Copied!' feedback message
+            const feedback = document.getElementById(feedbackId);
+            feedback.style.opacity = '1';
+            setTimeout(() => {
+                feedback.style.opacity = '0';
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
